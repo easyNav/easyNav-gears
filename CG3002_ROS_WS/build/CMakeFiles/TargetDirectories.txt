@@ -1,0 +1,8 @@
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/CMakeFiles/clean_test_results.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/CMakeFiles/doxygen.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/gtest/CMakeFiles/gtest.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/gtest/CMakeFiles/gtest_main.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/beginner_tutorials/CMakeFiles/listener.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/CMakeFiles/run_tests.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/beginner_tutorials/CMakeFiles/talker.dir
+/home/pi/easyNav-gears/CG3002_ROS_WS/build/CMakeFiles/tests.dir

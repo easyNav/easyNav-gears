@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/pi/easyNav-gears/CG3002_ROS_WS/install/setup.sh
