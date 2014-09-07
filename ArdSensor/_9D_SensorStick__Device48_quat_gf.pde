@@ -196,18 +196,21 @@ void sendData()
 
   String timestamp = String(millis(), DEC);
 
+
+  String output = accelx + '\n';
+
   // form the final string
-  String output = "1~";
-  output = output + accelx + '~';
-  // output = output + accely + ',';
-  // output = output + accelz + ',';
-  // output = output + gyrox + ',';
-  // output = output + gyroy + ',';
-  // output = output + gyroz + ',';
-  // output = output + cmpx + ',';
-  // output = output + cmpy + ',';
-  // output = output + cmpz + ',';
-  output = output + "~" + timestamp + '\n'; 
+  // String output = "1~";
+  // output = output + accelx + '~';
+  // // output = output + accely + ',';
+  // // output = output + accelz + ',';
+  // // output = output + gyrox + ',';
+  // // output = output + gyroy + ',';
+  // // output = output + gyroz + ',';
+  // // output = output + cmpx + ',';
+  // // output = output + cmpy + ',';
+  // // output = output + cmpz + ',';
+  // output = output + "~" + timestamp + '\n'; 
 
   // convert it to char array
   int len = output.length();
