@@ -1,0 +1,17 @@
+Work:
+
+1. Class-ify Smoothing data
+2. Collect more dataset that is accurate
+3. Real time plot of smoothing
+4. Try plotting the angle for x
+
+
+1. Get Z data for accel
+2. 1g 268 = 9.81ms
+3. 
+
+
+1. Match X based on Z
+2. Measure angle based on tilt 
+3. Implement velocity adder - find drift
+(has to be done on the pi)

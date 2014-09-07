@@ -179,6 +179,7 @@ void readSensors()
   cz = dz*10000;
 }
 
+
 void sendData()
 {
   // output values
@@ -197,20 +198,20 @@ void sendData()
   String timestamp = String(millis(), DEC);
 
 
-  String output = accelx + '\n';
+  //String output = accelx + '\n';
 
   // form the final string
-  // String output = "1~";
-  // output = output + accelx + '~';
-  // // output = output + accely + ',';
-  // // output = output + accelz + ',';
-  // // output = output + gyrox + ',';
-  // // output = output + gyroy + ',';
-  // // output = output + gyroz + ',';
-  // // output = output + cmpx + ',';
-  // // output = output + cmpy + ',';
-  // // output = output + cmpz + ',';
-  // output = output + "~" + timestamp + '\n'; 
+  String output = "1~";
+  output = output + accelx + '~'; //1
+  output = output + accely + '~'; //2
+  output = output + accelz + '~'; //3
+  output = output + gyrox + '~';  //4
+  output = output + gyroy + '~';  //5
+  output = output + gyroz + '~';  //6
+  output = output + cmpx + '~';   //7
+  output = output + cmpy + '~';   //8
+  output = output + cmpz + '~';   //9
+  output = output + "~" + timestamp + '\n'; 
 
   // convert it to char array
   int len = output.length();

@@ -32,17 +32,30 @@ class ArrayClass(object):
 if __name__ == "__main__":
     import random
     iteration_count = 500
+    import pylab
+    import numpy
 
-    # xfile = ArrayClass("DatasetX")
-    # print xfile.array
+    xfile = ArrayClass("DatasetX")
+    measurement_standard_deviation=numpy.std(xfile.array)
+    print measurement_standard_deviation
+
+    
+    #pylab.figure()
+    #pylab.plot(xfile.array)
+
+
+
+    ###############
 
     actual_values = [-0.37727 + j * j * 0.00001 for j in xrange(iteration_count)]
-    noisy_measurement = [random.random() * 2.0 - 1.0 + actual_val for actual_val in actual_values]
+    #noisy_measurement = [random.random() * 2.0 - 1.0 + actual_val for actual_val in actual_values]
+    noisy_measurement = xfile.array
 
     # in practice we would take our sensor, log some readings and get the
     # standard deviation
     import numpy
-    measurement_standard_deviation = numpy.std([random.random() * 2.0 - 1.0 for j in xrange(iteration_count)])
+    #measurement_standard_deviation = numpy.std([random.random() * 2.0 - 1.0 for j in xrange(iteration_count)])
+    measurement_standard_deviation = numpy.std(xfile.array)
 
     # The smaller this number, the fewer fluctuations, but can also venture off
     # course...
@@ -60,6 +73,7 @@ if __name__ == "__main__":
     pylab.plot(noisy_measurement, color='r', label='noisy measurements')
     pylab.plot(posteri_estimate_graph, 'b-', label='a posteri estimate')
     pylab.plot(actual_values, color='g', label='truth value')
+    #pylab.plot(xfile.array, color='y', label='mytest')
     pylab.legend()
     pylab.xlabel('Iteration')
     pylab.ylabel('Voltage')
