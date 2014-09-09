@@ -19,6 +19,27 @@ from scipy import signal
 Written by RAAJ
 """
 
+class KalmanFilter(object):
+
+    def __init__(self, process_variance, estimated_measurement_variance):
+        self.process_variance = process_variance
+        self.estimated_measurement_variance = estimated_measurement_variance
+        self.posteri_estimate = 0.0
+        self.posteri_error_estimate = 1.0
+
+    def input_latest_noisy_measurement(self, measurement):
+        priori_estimate = self.posteri_estimate
+        priori_error_estimate = self.posteri_error_estimate + self.process_variance
+
+        blending_factor = priori_error_estimate / (priori_error_estimate + self.estimated_measurement_variance)
+        self.posteri_estimate = priori_estimate + blending_factor * (measurement - priori_estimate)
+        self.posteri_error_estimate = (1 - blending_factor) * priori_error_estimate
+
+    def get_latest_estimated_measurement(self):
+        return self.posteri_estimate
+
+
+
 class SmoothClass(object):
 
     def __init__(self):
@@ -140,7 +161,14 @@ class AnalogPlot:
     line = self.ser.readline()
     data_arr = line.split("~")
 
-    accelx = float(data_arr[self.accelx_index])-15
+    ## All data points
+    accelx = float(data_arr[self.accelx_index])+70
+    #print accelx
+    if (accelx < 10) and (accelx > -10):
+        accelx = 0
+    else:
+        accelx = accelx/27.5
+        print 
     accely = float(data_arr[self.accely_index])-15
     accelz = float(data_arr[self.accelz_index])-15
     gyrox = float(data_arr[self.gyrox_index])/500 + 105
@@ -150,21 +178,59 @@ class AnalogPlot:
     compassy = float(data_arr[self.compassy_index])/10000
     compassz = float(data_arr[self.compassz_index])/10000
 
+    ## Add points
     data = [0, accelx, accely, accelz, gyrox, gyroy, gyroz, compassx, compassy, compassz]
-    plot_data = [gyrox, accely, accelz]
+    plot_data = [gyrox, gyrox, compassx]
     self.add(plot_data)
 
-    print gyrox
+    print compassy
+
     #print data
+    # for number in range(0,self.maxLen): 
+    #     print number
+    # for index in range(len(self.plot1_arr)):
+    #     self.plot1_arr[index] = self.plot1_arr[index] / 27.5
 
-    smooth_gyrox_arr = self.Smoother.smooth( np.array(self.plot1_arr) ,10,'blackman')
-    #from scipy import integrate
-    #smooth_accelx_arr_2 = smooth_accelx_arr
-    #integrated = integrate.cumtrapz(smooth_accelx_arr_2, smooth_accelx_arr, initial=0)
+    ## Kalman test
+    measurement_standard_deviation = np.std(self.plot1_arr)
+    process_variance = 1e-3
+    estimated_measurement_variance = measurement_standard_deviation ** 2  # 0.05 ** 2
+    kalman_filter = KalmanFilter(process_variance, estimated_measurement_variance)
+    posteri_estimate_graph = []
+    for iteration in xrange(0, self.maxLen):
+        kalman_filter.input_latest_noisy_measurement(self.plot1_arr[iteration])
+        posteri_estimate_graph.append(kalman_filter.get_latest_estimated_measurement())
 
-    #self.plot1_line.set_ydata(self.plot1_arr)
-    self.plot2_line.set_ydata(smooth_gyrox_arr)
-    #self.plot3_line.set_ydata(self.plot3_arr)
+    ## Smoothing and integration
+    from scipy import integrate
+    smooth_accelx_arr = self.Smoother.smooth( np.array(self.plot1_arr) ,10,'blackman')
+    integrated_velcx_arr = integrate.cumtrapz(smooth_accelx_arr, smooth_accelx_arr, initial=0)
+    integrated_dispx_arr = integrate.cumtrapz(integrated_velcx_arr, integrated_velcx_arr, initial=0)
+
+    vel_plot = []
+    velc_sum = 0
+    for i in xrange(0, self.maxLen):
+        velc_sum +=  smooth_accelx_arr[i] * 0.04
+        vel_plot.append(velc_sum)
+    dist_plot = []
+    dist_sum = 0
+    for i in xrange(0, self.maxLen):
+        dist_sum +=  vel_plot[i] * 0.04
+        dist_plot.append(dist_sum)
+    
+    ## Sum up display
+    x = 0
+    for val in integrated_dispx_arr:
+        x = x+val
+    #print x
+
+    ## Plot
+    # self.plot1_line.set_ydata(self.plot1_arr)
+    # self.plot2_line.set_ydata(smooth_accelx_arr)
+
+    self.plot1_line.set_ydata(smooth_accelx_arr)
+    #self.plot2_line.set_ydata(vel_plot)
+    #self.plot3_line.set_ydata(dist_sum)
     self.fig.canvas.draw()
 
   # add to buffer
@@ -198,9 +264,9 @@ def main():
 
   strPort = "/dev/tty.usbserial-A600dRYL"
 
-  analogPlot = AnalogPlot(strPort, 300)
+  analogPlot = AnalogPlot(strPort, 100)
   while(1):
-    print "X"
+    #print "X"
     analogPlot.update()
 
   analogPlot.close()
