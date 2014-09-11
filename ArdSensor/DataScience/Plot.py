@@ -146,6 +146,10 @@ class AnalogPlot:
     self.plot3_arr = deque([0.0]*maxLen)
     self.maxLen = maxLen
 
+    self.stableCount = 0
+    self.collect = 0
+    self.arrFirst = 0
+
     # plotarr
     x = np.linspace(0, maxLen, maxLen)
     y = np.linspace((maxLen/-2), (maxLen/2), maxLen)
@@ -156,20 +160,61 @@ class AnalogPlot:
     self.plot2_line, = ax.plot(x, y, 'g-', label='b')
     self.plot3_line, = ax.plot(x, y, 'b-', label='c')
 
+  def integrate(self, arr):
+    sum_arr = []
+    int_sum = 0
+    for i in xrange(0, self.maxLen):
+        int_sum +=  arr[i] * 0.04
+        sum_arr.append(int_sum)
+    return sum_arr
+
+  def clearArr(self, arr):
+    for i in xrange(0, self.maxLen):
+        arr[i] =  0
+
+  def sumArr(self, arr):
+    total = 0
+    for i in xrange(0, self.maxLen):
+        total += arr[i]
+    return total
 
   def update(self):
+
+    # (Read data)
     line = self.ser.readline()
     data_arr = line.split("~")
 
-    ## All data points
-    accelx = float(data_arr[self.accelx_index])+70
-    #print accelx
+    ## (AccelX)
+    accelx = float(data_arr[self.accelx_index])-20
     if (accelx < 10) and (accelx > -10):
         accelx = 0
     else:
-        accelx = accelx/27.5
-        print 
-    accely = float(data_arr[self.accely_index])-15
+        #accelx = accelx/27.5
+        print
+
+    ## (AccelY)
+    accely = float(data_arr[self.accely_index])-5
+    if (accely < 10) and (accely > -10):
+        accely = 0
+    else:
+        accely = accely/27.5
+        print
+
+    ## (Sim of stop no count)
+    if accelx==0 and accely==0:
+        # collect 100 units of blanks, then stop
+        if self.stableCount == 10:
+            self.arrFirst = 0
+            return
+        self.stableCount+=1
+    else:
+        # Need to clear array on first run
+        if self.arrFirst == 0:
+            self.arrFirst = 1
+            self.clearArr(self.plot1_arr)
+        self.stableCount = 0
+
+    ## (Other points)
     accelz = float(data_arr[self.accelz_index])-15
     gyrox = float(data_arr[self.gyrox_index])/500 + 105
     gyroy = float(data_arr[self.gyroy_index])/500 + 105
@@ -178,59 +223,50 @@ class AnalogPlot:
     compassy = float(data_arr[self.compassy_index])/10000
     compassz = float(data_arr[self.compassz_index])/10000
 
-    ## Add points
+    ## (Add points)
     data = [0, accelx, accely, accelz, gyrox, gyroy, gyroz, compassx, compassy, compassz]
-    plot_data = [gyrox, gyrox, compassx]
+    plot_data = [accelx, accely, compassx]
     self.add(plot_data)
+    print plot_data
 
-    print compassy
+    ## (Kalman filter)
+    # measurement_standard_deviation = np.std(self.plot1_arr)
+    # process_variance = 1e-3
+    # estimated_measurement_variance = measurement_standard_deviation ** 2  # 0.05 ** 2
+    # kalman_filter = KalmanFilter(process_variance, estimated_measurement_variance)
+    # posteri_estimate_graph = []
+    # for iteration in xrange(0, self.maxLen):
+    #     kalman_filter.input_latest_noisy_measurement(self.plot1_arr[iteration])
+    #     posteri_estimate_graph.append(kalman_filter.get_latest_estimated_measurement())
 
-    #print data
-    # for number in range(0,self.maxLen): 
-    #     print number
-    # for index in range(len(self.plot1_arr)):
-    #     self.plot1_arr[index] = self.plot1_arr[index] / 27.5
-
-    ## Kalman test
-    measurement_standard_deviation = np.std(self.plot1_arr)
-    process_variance = 1e-3
-    estimated_measurement_variance = measurement_standard_deviation ** 2  # 0.05 ** 2
-    kalman_filter = KalmanFilter(process_variance, estimated_measurement_variance)
-    posteri_estimate_graph = []
-    for iteration in xrange(0, self.maxLen):
-        kalman_filter.input_latest_noisy_measurement(self.plot1_arr[iteration])
-        posteri_estimate_graph.append(kalman_filter.get_latest_estimated_measurement())
-
-    ## Smoothing and integration
+    ## (Smoothing and integration)
     from scipy import integrate
     smooth_accelx_arr = self.Smoother.smooth( np.array(self.plot1_arr) ,10,'blackman')
-    integrated_velcx_arr = integrate.cumtrapz(smooth_accelx_arr, smooth_accelx_arr, initial=0)
-    integrated_dispx_arr = integrate.cumtrapz(integrated_velcx_arr, integrated_velcx_arr, initial=0)
+    velx_plot = self.integrate(smooth_accelx_arr)
+    distx_plot = self.integrate(velx_plot)
 
-    vel_plot = []
-    velc_sum = 0
-    for i in xrange(0, self.maxLen):
-        velc_sum +=  smooth_accelx_arr[i] * 0.04
-        vel_plot.append(velc_sum)
-    dist_plot = []
-    dist_sum = 0
-    for i in xrange(0, self.maxLen):
-        dist_sum +=  vel_plot[i] * 0.04
-        dist_plot.append(dist_sum)
-    
-    ## Sum up display
-    x = 0
-    for val in integrated_dispx_arr:
-        x = x+val
-    #print x
+    print self.sumArr(distx_plot)
+
+
+    # velx_plot = []
+    # velc_sum = 0
+    # for i in xrange(0, self.maxLen):
+    #     velc_sum +=  smooth_accelx_arr[i] * 0.04
+    #     velx_plot.append(velc_sum)
+    # distx_plot = []
+    # dist_sum = 0
+    # for i in xrange(0, self.maxLen):
+    #     dist_sum +=  velx_plot[i] * 0.04
+    #     distx_plot.append(dist_sum)
+
 
     ## Plot
     # self.plot1_line.set_ydata(self.plot1_arr)
     # self.plot2_line.set_ydata(smooth_accelx_arr)
 
     self.plot1_line.set_ydata(smooth_accelx_arr)
-    #self.plot2_line.set_ydata(vel_plot)
-    #self.plot3_line.set_ydata(dist_sum)
+    self.plot2_line.set_ydata(velx_plot)
+    self.plot3_line.set_ydata(distx_plot)
     self.fig.canvas.draw()
 
   # add to buffer
