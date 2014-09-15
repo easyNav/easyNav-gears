@@ -130,9 +130,14 @@ class GraphClass:
         self.arrow = self.g2.arrow(-50/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
                  edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
 
-        # g3 = self.fig.add_subplot(212, adjustable='box', aspect=0.3)
-        # self.g3_line, = g3.plot(x, y, 'r-', label='a')
-        # self.g3_line.set_ydata([45])
+        self.g3 = self.fig.add_subplot(212, adjustable='box', aspect=0.3)
+        self.g3_line, = self.g3.plot(10, 10, 'r-', label='a', marker='o')
+        # self.g3.arrow( 0, 0, 0.0, -0.2, fc="k", ec="k",
+        #     head_width=1, head_length=2 )
+        self.g3_line.set_ydata([0])
+        self.g3_line.set_xdata([0])
+        self.g3.set_ylim([-5,5])
+        self.g3.set_xlim([-5,5])
 
         self.draw()
 
@@ -142,6 +147,31 @@ class GraphClass:
         self.arrow.remove()
         self.arrow = self.g2.arrow(angle/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
                  edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
+        self.draw()
+
+    # g3
+    def set_g3(self, dist, ang):
+
+        x_arr = self.g3_line.get_xdata()
+        y_arr = self.g3_line.get_ydata()
+        # dist = dist + y_arr[-1]
+
+        new_xval = dist*np.sin(ang/180.*np.pi)
+        new_yval = dist*np.cos(ang/180.*np.pi)
+
+        new_yval = new_yval + y_arr[-1]
+        new_xval = new_xval + x_arr[-1]
+
+        print new_xval
+        print new_yval
+        print "--"
+
+        x_arr.append(new_xval)
+        y_arr.append(new_yval)
+        print x_arr
+        print y_arr
+        self.g3_line.set_xdata(x_arr)
+        self.g3_line.set_ydata(y_arr)
         self.draw()
 
     # g1
@@ -242,7 +272,7 @@ class CrunchClass:
         sum_arr = []
         int_sum = 0
         for i in xrange(0, len(arr)):
-            int_sum +=  arr[i] * (m_arr[i]*0.001)
+            int_sum +=  abs(arr[i] * (m_arr[i]*0.001))
             sum_arr.append(int_sum)
         return sum_arr
 
@@ -257,6 +287,7 @@ class CrunchClass:
         data-=1
 
         # Hack stab mechanism
+        #if data < 0.07 and data > 0.00:
         if data < 0.16 and data > 0.07:
             self.stab_count += 1
         else:
@@ -306,18 +337,29 @@ class CrunchClass:
                 """
                 Integral
                 """
-                ### Has to include distance
-                vel_arr = self.integrate(smoothed_arr, m_arr)
-                dist_arr = self.integrate(vel_arr, m_arr)
+                vel_smoothed_arr = self.integrate(smoothed_arr, m_arr)
+                dist_smoothed_arr = self.integrate(vel_smoothed_arr, m_arr)
 
-                total = self.sumArr(dist_arr)
-                print total
+                vel_kal_arr = self.integrate(posteri_estimate_graph, m_arr)
+                dist_kal_arr = self.integrate(vel_kal_arr, m_arr)
+
+                total_smoothed = self.sumArr(dist_smoothed_arr)
+                total_kal = self.sumArr(dist_kal_arr)
+
+
+                print "--"
+                print a_arr[0]
+                print a_arr[-1]
+                print total_smoothed
+                print total_kal
+                print (total_smoothed+total_kal)/2
+                print "--"
 
 
                 """
                 Dataset
                 """
-                return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_arr, dist=dist_arr, ms=m_arr, total=total)
+                return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
 
             else:
                 return None
@@ -338,15 +380,24 @@ class CrunchClass:
 
 def run_graph(ns):
     graph = GraphClass()
-    while(1):
-        time.sleep(0.3)
-        graph.set_g1(ns.raw_arr, "r")
-        #graph.set_g1(ns.kal_arr, "g")
-        graph.set_g1(ns.smth_arr, "g")
-        graph.set_g1(ns.vel_arr, "b")
+    # graph.set_g3(3,30)
+    # graph.set_g3(1,0)
+    # graph.set_g3(1,-30)
+    # graph.set_g3(1,-90)
+    # graph.set_g3(1,-130)
+    # graph.set_g3(1,-180)
 
+    while(1):
+        time.sleep(0.1)
         graph.set_angle(ns.yaw)
-    #serial.close()
+        if ns.ping == 1:
+            ns.ping = 0;
+            graph.set_g3(ns.total,ns.yaw)
+            graph.set_g1(ns.raw_arr, "r")
+            graph.set_g1(ns.smth_arr, "g")
+            graph.set_g1(ns.vel_arr, "b")
+
+    serial.close()
 
 """
 Algorithm
@@ -380,6 +431,8 @@ if __name__ == '__main__':
     ns.ang_arr = []
     ns.ms_arr = []
     ns.yaw = 0
+    ns.total = 0
+    ns.ping = 0
 
     # Mp
     p = multiprocessing.Process(target=run_graph, args=(ns,))
@@ -399,8 +452,8 @@ if __name__ == '__main__':
             ns.dist_arr = data_obj.dist_arr
             ns.ang_arr = data_obj.ang_arr
             ns.ms_arr = data_obj.ms_arr
-        #time.sleep(1)
-        #print ns
+            ns.total = data_obj.total
+            ns.ping = 1
 
     p.join()
     print 'after', ns
