@@ -6,6 +6,10 @@ import numpy as np
 import time
 import multiprocessing
 
+def get_time():
+    millis = int(round(time.time() * 1000))
+    return millis
+
 # Filter
 class KalmanFilter(object):
 
@@ -162,14 +166,8 @@ class GraphClass:
         new_yval = new_yval + y_arr[-1]
         new_xval = new_xval + x_arr[-1]
 
-        print new_xval
-        print new_yval
-        print "--"
-
         x_arr.append(new_xval)
         y_arr.append(new_yval)
-        print x_arr
-        print y_arr
         self.g3_line.set_xdata(x_arr)
         self.g3_line.set_ydata(y_arr)
         self.draw()
@@ -288,7 +286,7 @@ class CrunchClass:
 
         # Hack stab mechanism
         #if data < 0.07 and data > 0.00:
-        if data < 0.16 and data > 0.07:
+        if data < 0.16 and data > 0.04:
             self.stab_count += 1
         else:
             self.stab_count -= 1
@@ -315,6 +313,9 @@ class CrunchClass:
             self.ang_arr = []
 
             if len(r_arr) > 10:
+
+                print "DATA MORE THAN 10"
+                print get_time()
 
                 """
                 KalmanFilter
@@ -359,11 +360,16 @@ class CrunchClass:
                 """
                 Dataset
                 """
+                print "PROCESSED"
+                print get_time()
+
                 return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
 
             else:
+                print "WAIT FOR 10"
                 return None
         else:
+            print "RUNNING"
             return None
             
         #print data
