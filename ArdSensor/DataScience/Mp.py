@@ -214,6 +214,8 @@ class SerialClass:
         self.gy = 0
         self.gz = 0
         self.ms = 0
+        self.on_ground = 0
+        self.node = 0
 
     def read(self):
         # read line
@@ -232,6 +234,8 @@ class SerialClass:
         self.gy = float(self.arr[6])
         self.gz = float(self.arr[7])
         self.ms = float(self.arr[8])
+        self.on_ground = float(self.arr[9])
+        self.node = float(self.arr[10])
 
     def close(self):
         # close serial
@@ -280,109 +284,89 @@ class CrunchClass:
             total += arr[i]
         return total
 
+    def process(self):
+
+        r_arr = self.data_arr[:]
+        m_arr = self.ms_arr[:]
+        a_arr = self.ang_arr[:]
+
+        self.clear_all()
+
+        if len(r_arr) > 10:
+
+            #print "DATA MORE THAN 10"
+            #print get_time()
+
+            """
+            KalmanFilter
+            """
+            measurement_standard_deviation = np.std(r_arr)
+            process_variance = 1e-3
+            estimated_measurement_variance = measurement_standard_deviation ** 2
+            kalman_filter = KalmanFilter(process_variance, estimated_measurement_variance)
+            posteri_estimate_graph = []
+            for iteration in xrange(0, len(r_arr)):
+                kalman_filter.input_latest_noisy_measurement(r_arr[iteration])
+                posteri_estimate_graph.append(kalman_filter.get_latest_estimated_measurement())
+
+            """
+            Smoothing
+            """
+            Smoother = SmoothClass()
+            smoothed_arr = Smoother.smooth( np.array(r_arr) ,10,'blackman')
+
+            """
+            Integral
+            """
+            vel_smoothed_arr = self.integrate(smoothed_arr, m_arr)
+            dist_smoothed_arr = self.integrate(vel_smoothed_arr, m_arr)
+
+            vel_kal_arr = self.integrate(posteri_estimate_graph, m_arr)
+            dist_kal_arr = self.integrate(vel_kal_arr, m_arr)
+
+            total_smoothed = self.sumArr(dist_smoothed_arr) * 8
+            total_kal = self.sumArr(dist_kal_arr) * 8
+
+
+            print "--"
+            print a_arr[0]
+            print a_arr[-1]
+            print total_smoothed
+            print total_kal
+            print (total_smoothed+total_kal)/2
+            print "--"
+
+
+            """
+            Dataset
+            """
+            #print "PROCESSED"
+            #print get_time()
+
+            return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
+
+        else:
+            #print "DISCARD"
+            return None
+
     def add(self, data, ms, ang):
 
         data-=1
 
-        # Hack stab mechanism
-        #if data < 0.07 and data > 0.00:
-        if data < 0.16 and data > 0.04:
-            self.stab_count += 1
-        else:
-            self.stab_count -= 1
-            self.stop = 0
-        if self.stab_count == 5:
-            self.stop = 1
-            self.stab_count = 0
+        self.data_arr.append(data)
+        self.ms_arr.append(ms)
+        self.ang_arr.append(ang)
 
-        # Add data if moving
-        if self.stop == 0:
-            self.data_arr.append(data)
-            self.ms_arr.append(ms)
-            self.ang_arr.append(ang)
+        if(len(self.data_arr) > 200):
+            print "RESET"
+            self.clear_all();
 
-        # Collect list if stopped
-        if self.stop == 1:
+    def clear_all(self):
 
-            r_arr = self.data_arr[:]
-            m_arr = self.ms_arr[:]
-            a_arr = self.ang_arr[:]
+        self.data_arr = []
+        self.ms_arr = []
+        self.ang_arr = []
 
-            self.data_arr = []
-            self.ms_arr = []
-            self.ang_arr = []
-
-            if len(r_arr) > 10:
-
-                print "DATA MORE THAN 10"
-                print get_time()
-
-                """
-                KalmanFilter
-                """
-                measurement_standard_deviation = np.std(r_arr)
-                process_variance = 1e-3
-                estimated_measurement_variance = measurement_standard_deviation ** 2
-                kalman_filter = KalmanFilter(process_variance, estimated_measurement_variance)
-                posteri_estimate_graph = []
-                for iteration in xrange(0, len(r_arr)):
-                    kalman_filter.input_latest_noisy_measurement(r_arr[iteration])
-                    posteri_estimate_graph.append(kalman_filter.get_latest_estimated_measurement())
-
-                """
-                Smoothing
-                """
-                Smoother = SmoothClass()
-                smoothed_arr = Smoother.smooth( np.array(r_arr) ,10,'blackman')
-
-                """
-                Integral
-                """
-                vel_smoothed_arr = self.integrate(smoothed_arr, m_arr)
-                dist_smoothed_arr = self.integrate(vel_smoothed_arr, m_arr)
-
-                vel_kal_arr = self.integrate(posteri_estimate_graph, m_arr)
-                dist_kal_arr = self.integrate(vel_kal_arr, m_arr)
-
-                total_smoothed = self.sumArr(dist_smoothed_arr)
-                total_kal = self.sumArr(dist_kal_arr)
-
-
-                print "--"
-                print a_arr[0]
-                print a_arr[-1]
-                print total_smoothed
-                print total_kal
-                print (total_smoothed+total_kal)/2
-                print "--"
-
-
-                """
-                Dataset
-                """
-                print "PROCESSED"
-                print get_time()
-
-                return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
-
-            else:
-                print "WAIT FOR 10"
-                return None
-        else:
-            print "RUNNING"
-            return None
-            
-        #print data
-
-        # if data > 1.1:
-        #     self.data_arr.append(data)
-        #     self.ms_arr.append(ms)
-        #     self.ang_arr.append(ang)
-        #     print data
-
-        #     self.cap = 1
-
-        #if self.cap
 
 def run_graph(ns):
     graph = GraphClass()
@@ -449,17 +433,34 @@ if __name__ == '__main__':
         serial.read()
         ns.yaw=serial.yaw
 
-        data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
-        if data_obj != None:
-            ns.raw_arr = data_obj.raw_arr
-            ns.kal_arr = data_obj.kal_arr
-            ns.smth_arr = data_obj.smth_arr
-            ns.vel_arr = data_obj.vel_arr
-            ns.dist_arr = data_obj.dist_arr
-            ns.ang_arr = data_obj.ang_arr
-            ns.ms_arr = data_obj.ms_arr
-            ns.total = data_obj.total
-            ns.ping = 1
+        # 
+        if(serial.on_ground == 0):
+            crunch.add(serial.mag, serial.ms, serial.yaw)
+        else:
+            #print "ON_GROUND"
+            data_obj = crunch.process()
+            if data_obj != None:
+                ns.raw_arr = data_obj.raw_arr
+                ns.kal_arr = data_obj.kal_arr
+                ns.smth_arr = data_obj.smth_arr
+                ns.vel_arr = data_obj.vel_arr
+                ns.dist_arr = data_obj.dist_arr
+                ns.ang_arr = data_obj.ang_arr
+                ns.ms_arr = data_obj.ms_arr
+                ns.total = data_obj.total
+                ns.ping = 1
+
+        # data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
+        # if data_obj != None:
+        #     ns.raw_arr = data_obj.raw_arr
+        #     ns.kal_arr = data_obj.kal_arr
+        #     ns.smth_arr = data_obj.smth_arr
+        #     ns.vel_arr = data_obj.vel_arr
+        #     ns.dist_arr = data_obj.dist_arr
+        #     ns.ang_arr = data_obj.ang_arr
+        #     ns.ms_arr = data_obj.ms_arr
+        #     ns.total = data_obj.total
+        #     ns.ping = 1
 
     p.join()
     print 'after', ns
