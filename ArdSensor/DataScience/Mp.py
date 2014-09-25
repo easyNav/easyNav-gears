@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import multiprocessing
+import requests
+import json
 
 def get_time():
     millis = int(round(time.time() * 1000))
@@ -367,15 +369,50 @@ class CrunchClass:
         self.ms_arr = []
         self.ang_arr = []
 
+# Request class
+class RequestClass:
+
+    # constr
+    def __init__(self):
+        self.endpoint = "http://192.249.57.162:1337/"
+
+    def get_heartbeat(self):
+        r = requests.get(self.endpoint + "heartbeat")
+        return r.json()
+
+    def post_heartbeat_location(self, x, y, z, ang):
+        payload = { "x": x, "y": y, "z": z, "orientation": ang/180.*np.pi }
+        r = requests.post(self.endpoint + "heartbeat/location", data=payload)
+        return r.json()
+
+    def post_heartbeat_sonar(self, name, distance):
+        payload = { "distance" : distance }
+        r = requests.post(self.endpoint + "heartbeat/sonar/" + name, data=payload)
+        return r.json()
+
+# Position class
+class PositionClass:
+
+    # constr
+    def __init__(self, x, y, ang):
+        self.x = x
+        self.y = y
+        self.ang = ang
+
+    def set_pos(self, distance, ang):
+
+        new_xval = distance*np.sin(ang/180.*np.pi)
+        new_yval = distance*np.cos(ang/180.*np.pi)
+
+        self.y = new_yval + self.y
+        self.x = new_xval + self.x
+
+    def print_all(self):
+        print "X: " + str(self.x) + "Y: " + str(self.y) + "ANG: " + str(self.ang)
+
 
 def run_graph(ns):
     graph = GraphClass()
-    # graph.set_g3(3,30)
-    # graph.set_g3(1,0)
-    # graph.set_g3(1,-30)
-    # graph.set_g3(1,-90)
-    # graph.set_g3(1,-130)
-    # graph.set_g3(1,-180)
 
     while(1):
         time.sleep(0.1)
@@ -402,11 +439,20 @@ Algorithm
     4. Pass datasets to graph
 """
 
+def run_requests(ns):
+    requests = RequestClass()
+
+    while(1):
+        time.sleep(0.1)
+        data = requests.post_heartbeat_location(ns.x, ns.y, 0, ns.yaw)
+        print data
+
 if __name__ == '__main__':
 
     # Classes
     serial = SerialClass("/dev/tty.usbserial-A600dRYL")
     crunch = CrunchClass()
+    position = PositionClass(0, 0, 0)
 
     # Mp Manager
     manager = multiprocessing.Manager()
@@ -420,13 +466,17 @@ if __name__ == '__main__':
     ns.dist_arr = []
     ns.ang_arr = []
     ns.ms_arr = []
+    ns.x = 0
+    ns.y = 0
     ns.yaw = 0
     ns.total = 0
     ns.ping = 0
 
     # Mp
-    p = multiprocessing.Process(target=run_graph, args=(ns,))
-    p.start()
+    p1 = multiprocessing.Process(target=run_graph, args=(ns,))
+    p1.start()
+    p2 = multiprocessing.Process(target=run_requests, args=(ns,))
+    p2.start()
 
     # Serial Loop
     while(1):
@@ -450,6 +500,11 @@ if __name__ == '__main__':
                 ns.total = data_obj.total
                 ns.ping = 1
 
+                position.set_pos(data_obj.total, serial.yaw)
+                position.print_all()
+                ns.x = position.x
+                nx.y = position.y
+
         # data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
         # if data_obj != None:
         #     ns.raw_arr = data_obj.raw_arr
@@ -462,5 +517,6 @@ if __name__ == '__main__':
         #     ns.total = data_obj.total
         #     ns.ping = 1
 
-    p.join()
+    p1.join()
+    p2.join()
     print 'after', ns
