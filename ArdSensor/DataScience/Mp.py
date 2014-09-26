@@ -1,7 +1,7 @@
 
-import Filters
+#import Filters
 import serial
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import time
 import multiprocessing
@@ -113,92 +113,92 @@ class SmoothClass(object):
         return(improc)
 
 # Graph class
-class GraphClass:
+# class GraphClass:
 
-    # constr
-    def __init__(self):
-        # plotarr
-        self.maxLen=200
-        x = np.linspace(0, self.maxLen, self.maxLen)
-        y = np.linspace(-2.5, 2.5, self.maxLen)
-        plt.ion()
-        self.fig = plt.figure(figsize=(14,7))
+#     # constr
+#     def __init__(self):
+#         # plotarr
+#         self.maxLen=200
+#         x = np.linspace(0, self.maxLen, self.maxLen)
+#         y = np.linspace(-2.5, 2.5, self.maxLen)
+#         plt.ion()
+#         self.fig = plt.figure(figsize=(14,7))
 
-        g1 = self.fig.add_subplot(221, adjustable='box', aspect=10)
-        self.g1_line_1, = g1.plot(x, y, 'r-', label='a')
-        self.g1_line_2, = g1.plot(x, y, 'g-', label='a')
-        self.g1_line_3, = g1.plot(x, y, 'b-', label='a')
-        # self.g1_line.set_ydata([0,1,2,3,4,5,6,7,8,9])
+#         g1 = self.fig.add_subplot(221, adjustable='box', aspect=10)
+#         self.g1_line_1, = g1.plot(x, y, 'r-', label='a')
+#         self.g1_line_2, = g1.plot(x, y, 'g-', label='a')
+#         self.g1_line_3, = g1.plot(x, y, 'b-', label='a')
+#         # self.g1_line.set_ydata([0,1,2,3,4,5,6,7,8,9])
 
-        self.g2 = self.fig.add_subplot(222, adjustable='box', projection='polar', aspect=0.3)
-        self.g2_line, = self.g2.plot(x, y, 'r-', label='a')
-        self.g2_line.set_ydata([0])
-        self.arrow = self.g2.arrow(-50/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
-                 edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
+#         self.g2 = self.fig.add_subplot(222, adjustable='box', projection='polar', aspect=0.3)
+#         self.g2_line, = self.g2.plot(x, y, 'r-', label='a')
+#         self.g2_line.set_ydata([0])
+#         self.arrow = self.g2.arrow(-50/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
+#                  edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
 
-        self.g3 = self.fig.add_subplot(212, adjustable='box', aspect=0.3)
-        self.g3_line, = self.g3.plot(10, 10, 'r-', label='a', marker='o')
-        # self.g3.arrow( 0, 0, 0.0, -0.2, fc="k", ec="k",
-        #     head_width=1, head_length=2 )
-        self.g3_line.set_ydata([0])
-        self.g3_line.set_xdata([0])
-        self.g3.set_ylim([-5,5])
-        self.g3.set_xlim([-5,5])
+#         self.g3 = self.fig.add_subplot(212, adjustable='box', aspect=0.3)
+#         self.g3_line, = self.g3.plot(10, 10, 'r-', label='a', marker='o')
+#         # self.g3.arrow( 0, 0, 0.0, -0.2, fc="k", ec="k",
+#         #     head_width=1, head_length=2 )
+#         self.g3_line.set_ydata([0])
+#         self.g3_line.set_xdata([0])
+#         self.g3.set_ylim([-5,5])
+#         self.g3.set_xlim([-5,5])
 
-        self.draw()
+#         self.draw()
 
-    # arrow
-    def set_angle(self, angle):
-        #print "Setting angle to: " + str(angle)
-        self.arrow.remove()
-        self.arrow = self.g2.arrow(angle/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
-                 edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
-        self.draw()
+#     # arrow
+#     def set_angle(self, angle):
+#         #print "Setting angle to: " + str(angle)
+#         self.arrow.remove()
+#         self.arrow = self.g2.arrow(angle/180.*np.pi, 0.5, 0, 1, alpha = 1.0, width = 0.055,
+#                  edgecolor = 'black', facecolor = 'green', lw = 3, zorder = 5)
+#         self.draw()
 
-    # g3
-    def set_g3(self, dist, ang):
+#     # g3
+#     def set_g3(self, dist, ang):
 
-        x_arr = self.g3_line.get_xdata()
-        y_arr = self.g3_line.get_ydata()
-        # dist = dist + y_arr[-1]
+#         x_arr = self.g3_line.get_xdata()
+#         y_arr = self.g3_line.get_ydata()
+#         # dist = dist + y_arr[-1]
 
-        new_xval = dist*np.sin(ang/180.*np.pi)
-        new_yval = dist*np.cos(ang/180.*np.pi)
+#         new_xval = dist*np.sin(ang/180.*np.pi)
+#         new_yval = dist*np.cos(ang/180.*np.pi)
 
-        new_yval = new_yval + y_arr[-1]
-        new_xval = new_xval + x_arr[-1]
+#         new_yval = new_yval + y_arr[-1]
+#         new_xval = new_xval + x_arr[-1]
 
-        x_arr.append(new_xval)
-        y_arr.append(new_yval)
-        self.g3_line.set_xdata(x_arr)
-        self.g3_line.set_ydata(y_arr)
-        self.draw()
+#         x_arr.append(new_xval)
+#         y_arr.append(new_yval)
+#         self.g3_line.set_xdata(x_arr)
+#         self.g3_line.set_ydata(y_arr)
+#         self.draw()
 
-    # g1
-    def set_g1(self, arr, col):
-        f_arr = [];
-        for i in xrange(0,self.maxLen):
-            f_arr.append(0);
+#     # g1
+#     def set_g1(self, arr, col):
+#         f_arr = [];
+#         for i in xrange(0,self.maxLen):
+#             f_arr.append(0);
 
-        for m in xrange(0,len(arr)):
-            f_arr[m] = arr[m]
+#         for m in xrange(0,len(arr)):
+#             f_arr[m] = arr[m]
 
-        #print f_arr
-        if col == "r":
-            self.g1_line_1.set_ydata(f_arr)
-        elif col == "g":
-            self.g1_line_2.set_ydata(f_arr)
-        elif col == "b":
-            self.g1_line_3.set_ydata(f_arr)
-        self.draw()
+#         #print f_arr
+#         if col == "r":
+#             self.g1_line_1.set_ydata(f_arr)
+#         elif col == "g":
+#             self.g1_line_2.set_ydata(f_arr)
+#         elif col == "b":
+#             self.g1_line_3.set_ydata(f_arr)
+#         self.draw()
 
-    # draw
-    def draw(self):
-        self.fig.canvas.draw()
+#     # draw
+#     def draw(self):
+#         self.fig.canvas.draw()
 
-    # add data
-    def add():
-        print "A"
+#     # add data
+#     def add():
+#         print "A"
 
 # Serial class
 class SerialClass:
@@ -227,6 +227,7 @@ class SerialClass:
         ctrl = self.arr[0]
         if ctrl != "#YPRMfssT=":
             return
+        #print line
 
         self.yaw = float(self.arr[1])
         self.pitch = float(self.arr[2])
@@ -328,14 +329,14 @@ class CrunchClass:
 
             total_smoothed = self.sumArr(dist_smoothed_arr) * 8
             total_kal = self.sumArr(dist_kal_arr) * 8
-
+            total_average = (total_smoothed+total_kal)/2
 
             print "--"
             print a_arr[0]
             print a_arr[-1]
             print total_smoothed
             print total_kal
-            print (total_smoothed+total_kal)/2
+            print total_average
             print "--"
 
 
@@ -345,7 +346,11 @@ class CrunchClass:
             #print "PROCESSED"
             #print get_time()
 
-            return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
+            # NEED TO HANDLE THIS CASE CLEANER
+            if total_average > 100:
+                return None
+
+            return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=total_average)
 
         else:
             #print "DISCARD"
@@ -408,7 +413,7 @@ class PositionClass:
         self.x = new_xval + self.x
 
     def print_all(self):
-        print "X: " + str(self.x) + "Y: " + str(self.y) + "ANG: " + str(self.ang)
+        print "X: " + str(self.x) + " Y: " + str(self.y) + " ANG: " + str(self.ang)
 
 
 def run_graph(ns):
@@ -443,14 +448,14 @@ def run_requests(ns):
     requests = RequestClass()
 
     while(1):
-        time.sleep(0.1)
+        time.sleep(1)
         data = requests.post_heartbeat_location(ns.x, ns.y, 0, ns.yaw)
-        print data
+        #print data
 
 if __name__ == '__main__':
 
     # Classes
-    serial = SerialClass("/dev/tty.usbserial-A600dRYL")
+    serial = SerialClass("/dev/ttyUSB0")
     crunch = CrunchClass()
     position = PositionClass(0, 0, 0)
 
@@ -473,8 +478,8 @@ if __name__ == '__main__':
     ns.ping = 0
 
     # Mp
-    p1 = multiprocessing.Process(target=run_graph, args=(ns,))
-    p1.start()
+    # p1 = multiprocessing.Process(target=run_graph, args=(ns,))
+    # p1.start()
     p2 = multiprocessing.Process(target=run_requests, args=(ns,))
     p2.start()
 
@@ -503,7 +508,7 @@ if __name__ == '__main__':
                 position.set_pos(data_obj.total, serial.yaw)
                 position.print_all()
                 ns.x = position.x
-                nx.y = position.y
+                ns.y = position.y
 
         # data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
         # if data_obj != None:
@@ -517,6 +522,6 @@ if __name__ == '__main__':
         #     ns.total = data_obj.total
         #     ns.ping = 1
 
-    p1.join()
+    #p1.join()
     p2.join()
     print 'after', ns
