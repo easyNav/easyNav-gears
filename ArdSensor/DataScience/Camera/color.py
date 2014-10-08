@@ -37,7 +37,7 @@ while(True):
 
 	#img=cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-	lower=np.array([200, 200, 0],np.uint8)
+	lower=np.array([0, 200, 200],np.uint8)
 	upper=np.array([255, 255, 255],np.uint8)
 	separated=cv2.inRange(img,lower,upper)
 
