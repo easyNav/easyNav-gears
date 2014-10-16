@@ -48,7 +48,7 @@ def get_corners(point_arr):
 
 def process_image(frame):
     f = frame
-    f = cv2.flip(f,1)
+    #f = cv2.flip(f,1)
     f_copy = np.copy(f)
     blur = cv2.medianBlur(f,5)
     hsv = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
@@ -59,6 +59,9 @@ def process_image(frame):
     # Mask Dilations
     dilate_bitwised = cv2.bitwise_and(f,f, mask= dilate)
     erode_bitwised = cv2.bitwise_and(f,f, mask= erode)
+
+    # Texts
+    texts = ""
 
     # Image Contour
     ctr,heir = cv2.findContours(dilate,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
@@ -93,7 +96,10 @@ def process_image(frame):
 
         # Cut
         height, width = 600,800
-        defined_corners = get_corners(point_arr)
+        try:
+            defined_corners = get_corners(point_arr)
+        except:
+            continue
         src = np.array([defined_corners["tl"],defined_corners["tr"],defined_corners["bl"],defined_corners["br"]],np.float32)
         dst = np.array([[0,0],[width,0],[0,height],[width,height]],np.float32)
         M = cv2.getPerspectiveTransform(src,dst)
@@ -102,6 +108,6 @@ def process_image(frame):
         #cv2.imshow("bitwise",dst)
         #cv2.imshow("x",f)
         #time.sleep(5)
-        return get_text(dst)
+        texts += (get_text(dst) + ",")
 
-
+    return texts

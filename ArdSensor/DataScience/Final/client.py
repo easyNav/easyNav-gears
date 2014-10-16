@@ -37,7 +37,7 @@ def image_grabber(ns):
             if image_processed == 1:
                 image_processed = 0
 
-                buf = cv2.imencode( '.jpg', school_img )[1].tostring()
+                buf = cv2.imencode( '.jpg', ns.img )[1].tostring()
                 buf+="FAG"
                 client_socket.send(buf)
             
@@ -63,8 +63,8 @@ if __name__ == '__main__':
 
     # Camera
     c = cv2.VideoCapture(0)
-    c.set(3,800)
-    c.set(4,600)
+    c.set(3,1280)
+    c.set(4,720)
 
     # Mp
     p1 = multiprocessing.Process(target=image_grabber, args=(ns,))

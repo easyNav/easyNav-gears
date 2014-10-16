@@ -147,22 +147,22 @@ dicts=[
     "SUID": "29"
   },
   {
-    "name": "TO Canteen",
+    "name": "DB1",
     "id": 86,
     "SUID": "30"
   },
   {
-    "name": "TO COM2-2",
+    "name": "Store Room 1",
     "id": 87,
     "SUID": "31"
   },
   {
-    "name": "CONTROL ROOM",
+    "name": "Data Communications",
     "id": 87,
     "SUID": "31"
   },
   {
-    "name": "person",
+    "name": "Active Learning Lab",
     "id": 88,
     "SUID": "-1"
   }
@@ -170,8 +170,14 @@ dicts=[
 
 def match_location(string):
 
+    if string == "" or string == " ":
+        return ""
+
     prev_percent = 0
     winner = ""
+
+    print "--------"
+    print string
     
     # Loop through
     for item in dicts:
@@ -183,5 +189,12 @@ def match_location(string):
         if curr_percent > prev_percent:
             prev_percent = curr_percent
             winner = name
+
+    
+    print winner
+    print "--------"
+
+    if prev_percent < 0.4:
+      winner = ""
 
     return winner
