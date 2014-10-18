@@ -7,6 +7,7 @@ import time
 import multiprocessing
 import requests
 import json
+from collections import deque
 
 def get_time():
     millis = int(round(time.time() * 1000))
@@ -201,7 +202,7 @@ class GraphClass:
         print "A"
 
 # Serial class
-class SerialClass:
+class SerialAccel:
 
     # constr
     def __init__(self, strPort):
@@ -228,16 +229,50 @@ class SerialClass:
         if ctrl != "#YPRMfssT=":
             return
 
-        self.yaw = float(self.arr[1])
-        self.pitch = float(self.arr[2])
-        self.roll = float(self.arr[3])
-        self.mag = float(self.arr[4])
-        self.gx = float(self.arr[5])
-        self.gy = float(self.arr[6])
-        self.gz = float(self.arr[7])
-        self.ms = float(self.arr[8])
-        self.on_ground = float(self.arr[9])
-        self.node = float(self.arr[10])
+        try:
+            self.yaw = float(self.arr[1])
+            self.pitch = float(self.arr[2])
+            self.roll = float(self.arr[3])
+            self.mag = float(self.arr[4])
+            self.gx = float(self.arr[5])
+            self.gy = float(self.arr[6])
+            self.gz = float(self.arr[7])
+            self.ms = float(self.arr[8])
+            self.on_ground = float(self.arr[9])
+            self.node = float(self.arr[10])
+        except:
+            return
+
+    def close(self):
+        # close serial
+        self.ser.flush()
+        self.ser.close()
+
+# Serial class
+class SerialAngle:
+
+    # constr
+    def __init__(self, strPort):
+        # open serial port
+        self.ser = serial.Serial(strPort, 57600)
+        self.orientation = 0
+        self.heading = 0
+
+    def read(self):
+        # read line
+        # #YPRMfssT=,-1.24,-2.04,-179.52,1.08,0.04,-0.01,-1.00,10.00,
+
+        line = self.ser.readline()
+        self.arr = line.split(",")
+        ctrl = self.arr[0]
+        if ctrl != "#Orientation;Heading;ForwardAccel;Time;OnGround=":
+            return
+
+        try:
+            self.orientation = float(self.arr[1])
+            self.heading = float(self.arr[2])
+        except:
+            return
 
     def close(self):
         # close serial
@@ -267,6 +302,7 @@ class CrunchClass:
         self.data_arr = []
         self.ms_arr = []
         self.ang_arr = []
+        self.moving_avg = deque([1]*5)
 
         # Hack stab mechanism
         self.stab_count = 0
@@ -326,8 +362,18 @@ class CrunchClass:
             vel_kal_arr = self.integrate(posteri_estimate_graph, m_arr)
             dist_kal_arr = self.integrate(vel_kal_arr, m_arr)
 
-            total_smoothed = self.sumArr(dist_smoothed_arr) * 8
-            total_kal = self.sumArr(dist_kal_arr) * 8
+            total_smoothed = self.sumArr(dist_smoothed_arr)*5
+            total_kal = self.sumArr(dist_kal_arr)*5
+            avg = (total_smoothed+total_kal)/2
+
+            if len(self.moving_avg) < 5:
+                self.moving_avg.append(avg)
+            else:
+                self.moving_avg.pop()
+                self.moving_avg.appendleft(avg)
+
+            print self.moving_avg
+            avg = np.average(self.moving_avg)
 
 
             print "--"
@@ -335,8 +381,20 @@ class CrunchClass:
             print a_arr[-1]
             print total_smoothed
             print total_kal
-            print (total_smoothed+total_kal)/2
+            print avg
             print "--"
+
+            # logic for missed data -  overestimates double step
+
+            # moving average - turns different bucket 0.35
+
+            # below 0.15 reject?
+
+            # unnatural step
+
+            # If strafing - Tell Cruncer
+
+            # magnetic
 
 
             """
@@ -345,7 +403,7 @@ class CrunchClass:
             #print "PROCESSED"
             #print get_time()
 
-            return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=(total_smoothed+total_kal)/2)
+            return DataClass(raw=r_arr, kal=posteri_estimate_graph, smth=smoothed_arr, ang=a_arr, vel=vel_smoothed_arr, dist=dist_smoothed_arr, ms=m_arr, total=avg)
 
         else:
             #print "DISCARD"
@@ -406,6 +464,7 @@ class PositionClass:
 
         self.y = new_yval + self.y
         self.x = new_xval + self.x
+        self.ang = ang
 
     def print_all(self):
         print "X: " + str(self.x) + "Y: " + str(self.y) + "ANG: " + str(self.ang)
@@ -445,14 +504,30 @@ def run_requests(ns):
     while(1):
         time.sleep(0.1)
         data = requests.post_heartbeat_location(ns.x, ns.y, 0, ns.yaw)
-        print data
+        #print data
+
+def run_angle(ns):
+    serialAngle = SerialAngle("/dev/tty.usbserial-A5025VIL")
+
+    while(1):
+        # THIS IS FUCKING WRONG!
+        serialAngle.read()
+
+        shifted_angle = serialAngle.heading - 60
+        if (shifted_angle < 0):
+            shifted_angle = 360 + shifted_angle
+
+        ns.yaw = shifted_angle
+
+
 
 if __name__ == '__main__':
 
     # Classes
-    serial = SerialClass("/dev/tty.usbserial-A600dRYL")
+    serialAccel = SerialAccel("/dev/tty.usbserial-A600dRYL")
+
     crunch = CrunchClass()
-    position = PositionClass(0, 0, 0)
+    position = PositionClass(14.20, 14.40, 180)
 
     # Mp Manager
     manager = multiprocessing.Manager()
@@ -477,15 +552,28 @@ if __name__ == '__main__':
     p1.start()
     p2 = multiprocessing.Process(target=run_requests, args=(ns,))
     p2.start()
+    p3 = multiprocessing.Process(target=run_angle, args=(ns,))
+    p3.start()
 
     # Serial Loop
     while(1):
-        serial.read()
-        ns.yaw=serial.yaw
+
+        #count = count + 1
+        #print count
+
+        #print
+        
+        #print "Y"
+
+        #print ns.yaw
+        #continue
+
+
+        serialAccel.read()
 
         # 
-        if(serial.on_ground == 0):
-            crunch.add(serial.mag, serial.ms, serial.yaw)
+        if(serialAccel.on_ground == 0):
+            crunch.add(serialAccel.mag, serialAccel.ms, ns.yaw)
         else:
             #print "ON_GROUND"
             data_obj = crunch.process()
@@ -500,10 +588,10 @@ if __name__ == '__main__':
                 ns.total = data_obj.total
                 ns.ping = 1
 
-                position.set_pos(data_obj.total, serial.yaw)
+                position.set_pos(data_obj.total, ns.yaw)
                 position.print_all()
                 ns.x = position.x
-                nx.y = position.y
+                ns.y = position.y
 
         # data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
         # if data_obj != None:
@@ -519,4 +607,5 @@ if __name__ == '__main__':
 
     p1.join()
     p2.join()
+    p3.join()
     print 'after', ns
