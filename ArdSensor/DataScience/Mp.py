@@ -8,6 +8,7 @@ import multiprocessing
 import requests
 import json
 from collections import deque
+import math
 
 def get_time():
     millis = int(round(time.time() * 1000))
@@ -223,10 +224,13 @@ class SerialAccel:
     def read(self):
         # read line
         # #YPRMfssT=,-1.24,-2.04,-179.52,1.08,0.04,-0.01,-1.00,10.00,
-        line = self.ser.readline()
-        self.arr = line.split(",")
-        ctrl = self.arr[0]
-        if ctrl != "#YPRMfssT=":
+        try:
+            line = self.ser.readline()
+            self.arr = line.split(",")
+            ctrl = self.arr[0]
+            if ctrl != "#YPRMfssT=":
+                return
+        except:
             return
 
         try:
@@ -312,7 +316,7 @@ class CrunchClass:
         sum_arr = []
         int_sum = 0
         for i in xrange(0, len(arr)):
-            int_sum +=  abs(arr[i] * (m_arr[i]*0.001))
+            int_sum +=  arr[i] * (m_arr[i]*0.001)
             sum_arr.append(int_sum)
         return sum_arr
 
@@ -366,6 +370,26 @@ class CrunchClass:
             total_kal = self.sumArr(dist_kal_arr)*5
             avg = (total_smoothed+total_kal)/2
 
+
+            """
+            Avg
+            """
+
+            # Logic for missed data -  overestimates double step
+            if avg > 2.0:
+                avg = 2.0
+
+            # If below threshold reject
+            if avg < 0.3:
+                return None
+
+            # Within Range:
+            if avg < 0.8:
+                avg = 0.8
+            if avg > 1.2:
+                avg = 1.2
+
+            # Moving Average
             if len(self.moving_avg) < 5:
                 self.moving_avg.append(avg)
             else:
@@ -384,7 +408,7 @@ class CrunchClass:
             print avg
             print "--"
 
-            # logic for missed data -  overestimates double step
+             
 
             # moving average - turns different bucket 0.35
 
@@ -439,6 +463,11 @@ class RequestClass:
         return r.json()
 
     def post_heartbeat_location(self, x, y, z, ang):
+
+        # Joel Hack
+        if ang > 180:
+            ang = ang - 360
+
         payload = { "x": x, "y": y, "z": z, "orientation": ang/180.*np.pi }
         r = requests.post(self.endpoint + "heartbeat/location", data=payload)
         return r.json()
@@ -503,6 +532,7 @@ def run_requests(ns):
 
     while(1):
         time.sleep(0.1)
+        # Convert angle to radians
         data = requests.post_heartbeat_location(ns.x, ns.y, 0, ns.yaw)
         #print data
 
@@ -510,7 +540,7 @@ def run_angle(ns):
     serialAngle = SerialAngle("/dev/tty.usbserial-A5025VIL")
 
     while(1):
-        # THIS IS FUCKING WRONG!
+
         serialAngle.read()
 
         shifted_angle = serialAngle.heading - 60
@@ -558,20 +588,8 @@ if __name__ == '__main__':
     # Serial Loop
     while(1):
 
-        #count = count + 1
-        #print count
-
-        #print
-        
-        #print "Y"
-
-        #print ns.yaw
-        #continue
-
-
         serialAccel.read()
 
-        # 
         if(serialAccel.on_ground == 0):
             crunch.add(serialAccel.mag, serialAccel.ms, ns.yaw)
         else:
@@ -592,18 +610,6 @@ if __name__ == '__main__':
                 position.print_all()
                 ns.x = position.x
                 ns.y = position.y
-
-        # data_obj = crunch.add(serial.mag, serial.ms, serial.yaw)
-        # if data_obj != None:
-        #     ns.raw_arr = data_obj.raw_arr
-        #     ns.kal_arr = data_obj.kal_arr
-        #     ns.smth_arr = data_obj.smth_arr
-        #     ns.vel_arr = data_obj.vel_arr
-        #     ns.dist_arr = data_obj.dist_arr
-        #     ns.ang_arr = data_obj.ang_arr
-        #     ns.ms_arr = data_obj.ms_arr
-        #     ns.total = data_obj.total
-        #     ns.ping = 1
 
     p1.join()
     p2.join()
